@@ -1,0 +1,16 @@
+{
+  "name": "example-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "db",
+    "database.port": "5432",
+    "database.user": "postgres",
+    "database.password": "${DB_PASSWORD}",
+    "database.dbname": "postgres",
+    "topic.prefix": "example",
+    "slot.name": "example_slot",
+    "publication.autocreate.mode": "filtered",
+    "table.include.list": "cd.members,cd.facilities,cd.bookings",
+    "plugin.name": "pgoutput"
+  }
+}

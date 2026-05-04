@@ -1,0 +1,5 @@
+.env
+debezium/register-postgres.json
+.DS_Store
+.vscode/
+*.log

@@ -1,0 +1,38 @@
+# Pipeline stages — jobs within the same stage run in parallel.
+# Only one stage here; add 'build', 'test', 'deploy' etc. as the project grows.
+stages:
+  - validate
+
+# Docker-in-Docker (dind) requires these two variables so the Docker CLI
+# inside the job can reach the dind service over TCP without TLS.
+variables:
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+# Validates docker-compose.yml syntax.
+# 'docker compose config' parses the file, resolves variable substitutions,
+# and prints the merged config. Exits non-zero on any error, failing the job.
+# Only runs when docker-compose.yml is changed — skipped on all other commits.
+validate:compose:
+  stage: validate
+  image: docker:27          # Official Docker CLI image
+  services:
+    - docker:27-dind        # Docker daemon sidecar required for 'docker compose'
+  script:
+    - docker compose config --quiet
+  rules:
+    - changes:
+        - docker-compose.yml
+
+# Lints all shell scripts with ShellCheck (https://www.shellcheck.net/).
+# Catches: unquoted variables, missing error handling, portability issues, etc.
+# Only runs when a .sh file changes — skipped on all other commits.
+validate:shellcheck:
+  stage: validate
+  image: koalaman/shellcheck-alpine:stable  # Minimal Alpine image with ShellCheck pre-installed
+  script:
+    - shellcheck start.sh stop.sh demo/run.sh demo/consume.sh
+  rules:
+    - changes:
+        - "*.sh"
+        - "demo/*.sh"
