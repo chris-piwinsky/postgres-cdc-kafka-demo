@@ -1,31 +1,25 @@
+# Kafka
 
-# Kafka with DOCKER
+Kafka runs as part of the root `docker-compose.yml` in single-node KRaft mode (no Zookeeper).
 
-Kafka runs as part of the root `docker-compose.yml` in KRaft mode (no Zookeeper). Start it with `./start.sh` from the project root.
-
-Kill anything listening on port 9092:
+Start the full stack from the project root:
 ```bash
-lsof -ti :9092 | xargs kill -9
+./start.sh
 ```
 
-Start Kafka (version 4.2.0):
+Start only Kafka (if needed):
 ```bash
-docker compose up -d
+docker compose up -d kafka
 ```
 
-Confirm it is up and running:
+Confirm Kafka is up:
 ```bash
-docker exec -ti kafka /opt/kafka/bin/kafka-cluster.sh cluster-id --bootstrap-server :9092
+docker exec -ti kafka /opt/kafka/bin/kafka-cluster.sh cluster-id --bootstrap-server kafka:9092
 ```
 
-Create a sample topic:
+Stop services:
 ```bash
-docker exec -ti kafka /opt/kafka/bin/kafka-console-producer.sh --bootstrap-server :9092 --topic demo
-```
-
-Stop Kafka:
-```bash
-docker compose down
+./stop.sh
 ```
 
 ## KRaft listener configuration
@@ -42,53 +36,75 @@ Kafka requires explicit listener config so other containers (e.g. Debezium Conne
 
 Without `KAFKA_ADVERTISED_LISTENERS`, Kafka defaults to `localhost` and other containers cannot connect.
 
+## Topics in this demo
+
+Debezium produces table CDC events to:
+
+- `example.cd.members`
+- `example.cd.facilities`
+- `example.cd.bookings`
+
+Kafka Connect internal topics:
+
+- `connect_configs`
+- `connect_offsets`
+- `connect_statuses`
+
+List topics:
+```bash
+docker exec -ti kafka /opt/kafka/bin/kafka-topics.sh \
+  --list --bootstrap-server kafka:9092
+```
+
+Consume members CDC events:
+```bash
+docker exec -ti kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server kafka:9092 \
+  --topic example.cd.members \
+  --from-beginning
+```
+
 ## Example CDC event payloads
 
-`create.json` and `update.json` are reference examples of the Debezium CDC event structure published to the `example.public.customers` Kafka topic.
+`create.json` and `update.json` are reference examples of Debezium CDC events published to the `example.cd.members` topic.
 
-Each event has two top-level fields:
+In this project, connector schemas are disabled (`KEY_CONVERTER_SCHEMAS_ENABLE=false`, `VALUE_CONVERTER_SCHEMAS_ENABLE=false`), so events are flat JSON payloads.
 
-| Field | Description |
-|---|---|
-| `schema` | Describes the structure of the payload (field names, types, optional flags) |
-| `payload` | The actual change data |
-
-### payload fields
+Each event includes:
 
 | Field | Description |
 |---|---|
 | `before` | Row state before the change. `null` for INSERTs |
 | `after` | Row state after the change. `null` for DELETEs |
 | `op` | Operation type: `c` = INSERT, `u` = UPDATE, `d` = DELETE, `r` = snapshot READ |
-| `source` | Metadata: connector name, table, transaction ID (`txId`), log sequence number (`lsn`), timestamp |
+| `source` | Metadata: connector, schema, table, transaction ID (`txId`), LSN, timestamps |
 
 ### create.json
 
 Represents an INSERT (`"op": "c"`). `before` is `null`; `after` contains the new row.
 
 ```json
-"payload": {
+{
   "before": null,
-  "after": { "id": 1, "name": "Test User", "email": "test@example.com" },
+  "after": { "memid": 101, "surname": "Demo1", "firstname": "User1" },
   "op": "c"
 }
 ```
 
 ### update.json
 
-Represents an UPDATE (`"op": "u"`). Both `before` and `after` are populated because `REPLICA IDENTITY FULL` is set on the `customers` table (see [flyway/migrations/V2__replica_identity.sql](../flyway/migrations/V2__replica_identity.sql)).
+Represents an UPDATE (`"op": "u"`). Both `before` and `after` are populated because `REPLICA IDENTITY FULL` is set on `cd.members` (see [flyway/migrations/V3__replica_identity.sql](../flyway/migrations/V3__replica_identity.sql)).
 
 ```json
-"payload": {
-  "before": { "id": 1, "name": "Test User", "email": "test@example.com" },
-  "after":  { "id": 1, "name": "Updated Name", "email": "new@example.com" },
+{
+  "before": { "memid": 101, "surname": "Demo1", "firstname": "User1", "address": "1 Demo Lane, Boston" },
+  "after":  { "memid": 101, "surname": "Demo1", "firstname": "User1", "address": "100 Updated Blvd, Boston" },
   "op": "u"
 }
 ```
 
-> These files are reference examples only. They are not registered with a schema registry (schemas are disabled in the connector config).
+These files are reference examples only.
 
 ## Links
 
 - [Developing event-driven applications with Kafka and Docker](https://docs.docker.com/guides/kafka/)
-- [Docker files]()

@@ -79,15 +79,17 @@ curl -s http://localhost:8083/ | python3 -m json.tool
 
 ### `could not access file "decoderbufs": No such file or directory`
 
-Debezium tried to use the `decoderbufs` logical decoding plugin which is not installed on the official `postgres:17` image. Fix: ensure `plugin.name: pgoutput` is set in `register-postgres.json`. `pgoutput` is built into PostgreSQL 10+ and requires no extra installation.
+Debezium tried to use the `decoderbufs` logical decoding plugin which is not installed on the official `postgres:17` image. Fix: ensure `plugin.name: pgoutput` is set in `register-postgres.json.example`. `pgoutput` is built into PostgreSQL 10+ and requires no extra installation.
 
 If you hit this after already registering the connector, delete it and re-register:
 ```bash
 curl -X DELETE http://localhost:8083/connectors/example-connector
 
-curl -X POST -H "Content-Type: application/json" \
-     --data @register-postgres.json \
-     http://localhost:8083/connectors
+source .env
+envsubst < debezium/register-postgres.json.example \
+  | curl -X POST -H "Content-Type: application/json" \
+      --data @- \
+      http://localhost:8083/connectors
 ```
 
 ### Connector is FAILED

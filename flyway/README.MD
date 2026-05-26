@@ -29,8 +29,8 @@ docker compose run --rm flyway
 
    Examples:
    ```
-   flyway/migrations/V3__add_product_tags.sql
-   flyway/migrations/V4__add_user_roles.sql
+  flyway/migrations/V4__add_product_tags.sql
+  flyway/migrations/V5__add_user_roles.sql
    ```
 
 2. Write your SQL (`CREATE TABLE`, `ALTER TABLE`, seed data, etc.)
@@ -65,8 +65,9 @@ ORDER BY installed_rank;
 
 | Version | File | Description |
 |---|---|---|
-| V1 | `V1__init_schema.sql` | Initial schema — creates `customers` table |
-| V2 | `V2__replica_identity.sql` | Sets `REPLICA IDENTITY FULL` on `customers` for Debezium CDC (captures full before/after row images on UPDATE/DELETE) |
+| V1 | `V1__init_schema.sql` | Initial `cd` schema — creates `members`, `facilities`, and `bookings` |
+| V2 | `V2__seed_data.sql` | Seeds sample data for `cd` tables |
+| V3 | `V3__replica_identity.sql` | Sets `REPLICA IDENTITY FULL` on CDC tables so Debezium captures full `before` values on UPDATE/DELETE |
 
 ## File structure
 
@@ -76,7 +77,8 @@ projects/                        # project root
   start.sh                       # triggers Flyway as part of startup
   flyway/
     migrations/
-      V1__init_schema.sql        # initial tables (customers, etc.)
-      V2__replica_identity.sql   # REPLICA IDENTITY FULL for CDC
+      V1__init_schema.sql        # initial cd schema and tables
+      V2__seed_data.sql          # sample data for cd schema
+      V3__replica_identity.sql   # REPLICA IDENTITY FULL for CDC tables
     README.MD
 ```
