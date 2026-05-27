@@ -17,8 +17,7 @@ A local event-driven streaming environment using Postgres, Kafka, Debezium CDC, 
 - [Demo quick checklist](#demo-quick-checklist)
 - [Demo](#demo)
 - [Useful Postgres queries](#useful-postgres-queries)
-- [Future improvements](#future-improvements)
-- [Links](#links)
+- [Useful Postgres queries guide](documentation/useful-postgres-queries.MD)
 - [Script documentation](#script-documentation)
     - [Architecture and troubleshooting guide](documentation/architecture-troubleshooting.MD)
     - [start.sh guide](documentation/start.sh.MD)
@@ -27,7 +26,8 @@ A local event-driven streaming environment using Postgres, Kafka, Debezium CDC, 
     - [reset.sh guide](documentation/reset.sh.MD)
     - [demo/run.sh guide](documentation/demo-run.sh.MD)
     - [demo/consume.sh guide](documentation/demo-consume.sh.MD)
-
+- [Links](#links)
+- [Future improvements](#future-improvements)
 ## Architecture
 
 ```
@@ -267,70 +267,29 @@ See [kafka/README.MD](kafka/README.MD) for full CDC event payload documentation.
 
 ## Useful Postgres queries
 
-Connect to the running Postgres container:
+See [documentation/useful-postgres-queries.MD](documentation/useful-postgres-queries.MD) for full query list and examples.
 
-```bash
-docker exec -ti some-postgres psql -U postgres
-```
+## Script documentation
 
-**Verify WAL and replication settings** (required for CDC):
+- [Architecture and troubleshooting guide](documentation/architecture-troubleshooting.MD)
+- [start.sh guide](documentation/start.sh.MD)
+- [stop.sh guide](documentation/stop.sh.MD)
+- [health.sh guide](documentation/health.sh.MD)
+- [reset.sh guide](documentation/reset.sh.MD)
+- [demo/run.sh guide](documentation/demo-run.sh.MD)
+- [demo/consume.sh guide](documentation/demo-consume.sh.MD)
+- [Useful Postgres queries guide](documentation/useful-postgres-queries.MD)
 
-```sql
-SELECT name, setting
-FROM pg_settings
-WHERE name IN ('wal_level', 'max_wal_senders', 'max_replication_slots');
-```
+## Links
 
-**Check active replication slots** (Debezium creates one on first connect):
-
-```sql
-SELECT slot_name, plugin, database, active, restart_lsn
-FROM pg_replication_slots;
-```
-
-**Check publications** (Debezium creates a publication for the tables it tracks):
-
-```sql
-SELECT * FROM pg_publication;
-SELECT * FROM pg_publication_tables;
-```
-
-**Check replica identity on a table** (must be `f` = FULL for UPDATE/DELETE `before` values):
-
-```sql
-SELECT relname, relreplident
-FROM pg_class
-WHERE relname IN ('members', 'facilities', 'bookings');
-```
-
-`relreplident` values: `d` = default (primary key only), `f` = full (all columns), `n` = nothing.
-
-**Inspect Flyway migration history**:
-
-```sql
-SELECT version, description, success, installed_on
-FROM flyway_schema_history
-ORDER BY installed_rank;
-```
-
-**Inspect table data**:
-
-```sql
-SELECT memid, surname, firstname, address FROM cd.members LIMIT 10;
-```
-
-**Insert a test row** (triggers a CDC event on the Kafka topic):
-
-```sql
-INSERT INTO cd.members (memid, surname, firstname, address, zipcode, telephone, recommendedby, joindate)
-VALUES (999, 'TestUser', 'Local', '1 Test Street, Boston', 12345, '555-000-0001', NULL, NOW());
-```
-
-**Update a row** (triggers a CDC UPDATE event; `before` is populated because of `REPLICA IDENTITY FULL`):
-
-```sql
-UPDATE cd.members SET address = '2 New Street, Boston' WHERE memid = 999;
-```
+- [Conduktor Learn](https://docs.conduktor.io/learn)
+- [Kafka Quickstart](https://kafka.apache.org/quickstart/)
+- [Stream Processing](https://blog.devgenius.io/what-is-stream-processing-7fcb561e65d9)
+- [Postgres CDC with Debezium: Complete tutorial](https://blog.sequinstream.com/postgres-cdc-with-debezium-complete-step-by-step-tutorial/)
+- [Beyond the Basics of Debezium for PostgreSQL — Part 1](https://medium.com/@arijit.mazumdar/beyond-the-basics-of-debezium-for-postgresql-part-1-d1c6952ae110)
+- [What is Apache Kafka and how does it work?](https://stanislavkozlovski.medium.com/what-is-apache-kafka-and-how-does-it-work-16023aa2efee)
+- [How to start Kafka using Docker](https://docs.conduktor.io/learn/getting-started/docker-setup)
+- [Kafka — Building a beginner-friendly Kafka project](https://medium.com/devtechie/kafka-building-a-beginner-friendly-kafka-project-2fb0437efcb6)
 
 ## Future improvements
 
@@ -356,24 +315,3 @@ Backlog ideas to improve reliability, learning value, and production-readiness o
 1. CI smoke test
 2. Observability helpers
 3. Persistent Kafka mode option
-
-## Script documentation
-
-- [Architecture and troubleshooting guide](documentation/architecture-troubleshooting.MD)
-- [start.sh guide](documentation/start.sh.MD)
-- [stop.sh guide](documentation/stop.sh.MD)
-- [health.sh guide](documentation/health.sh.MD)
-- [reset.sh guide](documentation/reset.sh.MD)
-- [demo/run.sh guide](documentation/demo-run.sh.MD)
-- [demo/consume.sh guide](documentation/demo-consume.sh.MD)
-
-## Links
-
-- [Conduktor Learn](https://docs.conduktor.io/learn)
-- [Kafka Quickstart](https://kafka.apache.org/quickstart/)
-- [Stream Processing](https://blog.devgenius.io/what-is-stream-processing-7fcb561e65d9)
-- [Postgres CDC with Debezium: Complete tutorial](https://blog.sequinstream.com/postgres-cdc-with-debezium-complete-step-by-step-tutorial/)
-- [Beyond the Basics of Debezium for PostgreSQL — Part 1](https://medium.com/@arijit.mazumdar/beyond-the-basics-of-debezium-for-postgresql-part-1-d1c6952ae110)
-- [What is Apache Kafka and how does it work?](https://stanislavkozlovski.medium.com/what-is-apache-kafka-and-how-does-it-work-16023aa2efee)
-- [How to start Kafka using Docker](https://docs.conduktor.io/learn/getting-started/docker-setup)
-- [Kafka — Building a beginner-friendly Kafka project](https://medium.com/devtechie/kafka-building-a-beginner-friendly-kafka-project-2fb0437efcb6)
