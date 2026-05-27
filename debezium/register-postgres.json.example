@@ -7,10 +7,10 @@
     "database.user": "postgres",
     "database.password": "${DB_PASSWORD}",
     "database.dbname": "postgres",
-    "topic.prefix": "example",
+    "topic.prefix": "${TOPIC_PREFIX}",
     "slot.name": "example_slot",
     "publication.autocreate.mode": "filtered",
-    "table.include.list": "cd.members,cd.facilities,cd.bookings",
+    "table.include.list": "${TABLE_INCLUDE_LIST}",
     "plugin.name": "pgoutput"
   }
 }

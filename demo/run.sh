@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
@@ -12,6 +15,15 @@ ok()   { echo -e "${GREEN}[✓]${NC} $1"; }
 fail() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 info() { echo -e "${YELLOW}[~]${NC} $1"; }
 step() { echo -e "${CYAN}${BOLD}--- $1 ---${NC}"; }
+
+# Load connector scope from .env if present.
+if [[ -f "$ROOT_DIR/.env" ]]; then
+  # shellcheck source=.env
+  set -a; source "$ROOT_DIR/.env"; set +a
+fi
+
+TOPIC_PREFIX="${TOPIC_PREFIX:-example}"
+TABLE_INCLUDE_LIST="${TABLE_INCLUDE_LIST:-cd.members,cd.facilities,cd.bookings}"
 
 psql() {
   docker exec -i some-postgres psql -U postgres -c "$1"
@@ -26,6 +38,19 @@ echo ""
 echo "=== CDC Demo: INSERT / UPDATE / DELETE ==="
 echo ""
 
+# Ensure demo writes are in connector scope.
+if [[ ",${TABLE_INCLUDE_LIST}," != *",cd.members,"* ]]; then
+  fail "cd.members is not in TABLE_INCLUDE_LIST ('$TABLE_INCLUDE_LIST').
+  This demo writes to cd.members, so include it in .env and restart:
+  TABLE_INCLUDE_LIST=cd.members,cd.facilities,cd.bookings
+  ./start.sh
+  ./health.sh"
+fi
+
+ok "Demo scope check passed: cd.members is included"
+info "Current connector scope: topic.prefix=$TOPIC_PREFIX"
+info "Current connector scope: table.include.list=$TABLE_INCLUDE_LIST"
+
 # 1. Check connector is RUNNING
 info "Checking Debezium connector status..."
 CONNECTOR_STATE=$(curl -sf http://localhost:8083/connectors/example-connector/status 2>/dev/null \
@@ -33,8 +58,9 @@ CONNECTOR_STATE=$(curl -sf http://localhost:8083/connectors/example-connector/st
 
 if [[ "$CONNECTOR_STATE" != "RUNNING" ]]; then
   fail "Connector is not RUNNING (state: $CONNECTOR_STATE). Register it first:
-  cd debezium && curl -X POST -H 'Content-Type: application/json' \\
-    -d @register-postgres.json http://localhost:8083/connectors"
+  source .env
+  envsubst < debezium/register-postgres.json.example \\
+    | curl -X POST -H 'Content-Type: application/json' --data @- http://localhost:8083/connectors"
 fi
 ok "Connector is RUNNING"
 

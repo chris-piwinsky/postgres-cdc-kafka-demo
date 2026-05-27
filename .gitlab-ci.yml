@@ -31,7 +31,7 @@ validate:shellcheck:
   stage: validate
   image: koalaman/shellcheck-alpine:stable  # Minimal Alpine image with ShellCheck pre-installed
   script:
-    - shellcheck start.sh stop.sh demo/run.sh demo/consume.sh
+    - shellcheck start.sh stop.sh health.sh reset.sh demo/run.sh demo/consume.sh
   rules:
     - changes:
         - "*.sh"

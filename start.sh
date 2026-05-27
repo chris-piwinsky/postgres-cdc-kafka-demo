@@ -26,6 +26,11 @@ else
   fail ".env not found — copy .env.example to .env and fill in values"
 fi
 
+# Connector scope defaults for reusable demos across schemas.
+TOPIC_PREFIX="${TOPIC_PREFIX:-example}"
+TABLE_INCLUDE_LIST="${TABLE_INCLUDE_LIST:-cd.members,cd.facilities,cd.bookings}"
+export TOPIC_PREFIX TABLE_INCLUDE_LIST
+
 # 1. Check Docker is running
 info "Checking Docker..."
 docker info > /dev/null 2>&1 || fail "Docker is not running. Start Docker Desktop and try again."
@@ -115,6 +120,9 @@ else
       http://localhost:8083/connectors 2>&1) || fail "Failed to register connector. Check: docker logs debezium-connect"
   ok "Debezium connector registered"
 fi
+
+ok "Connector scope: topic.prefix=$TOPIC_PREFIX"
+ok "Connector scope: table.include.list=$TABLE_INCLUDE_LIST"
 
 # Verify connector is RUNNING
 CONNECTOR_STATE=$(curl -sf http://localhost:8083/connectors/example-connector/status 2>/dev/null \

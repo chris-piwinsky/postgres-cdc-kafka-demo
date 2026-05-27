@@ -2,6 +2,32 @@
 
 A local event-driven streaming environment using Postgres, Kafka, Debezium CDC, and Flyway schema migrations — all orchestrated via a single Docker Compose file.
 
+## Table of contents
+
+- [Architecture](#architecture)
+- [Architecture and troubleshooting guide](#architecture-and-troubleshooting-guide)
+- [Prerequisites](#prerequisites)
+- [Quick start](#quick-start)
+- [Stop everything](#stop-everything)
+- [Health check](#health-check)
+- [Full reset](#full-reset)
+- [Configuration](#configuration)
+- [Adding a schema migration](#adding-a-schema-migration)
+- [Registering a Debezium connector](#registering-a-debezium-connector)
+- [Demo quick checklist](#demo-quick-checklist)
+- [Demo](#demo)
+- [Useful Postgres queries](#useful-postgres-queries)
+- [Future improvements](#future-improvements)
+- [Links](#links)
+- [Script documentation](#script-documentation)
+    - [Architecture and troubleshooting guide](documentation/architecture-troubleshooting.MD)
+    - [start.sh guide](documentation/start.sh.MD)
+    - [stop.sh guide](documentation/stop.sh.MD)
+    - [health.sh guide](documentation/health.sh.MD)
+    - [reset.sh guide](documentation/reset.sh.MD)
+    - [demo/run.sh guide](documentation/demo-run.sh.MD)
+    - [demo/consume.sh guide](documentation/demo-consume.sh.MD)
+
 ## Architecture
 
 ```
@@ -23,6 +49,10 @@ A local event-driven streaming environment using Postgres, Kafka, Debezium CDC, 
 | `kafka`          | apache/kafka:4.2.0           | 9092  | Event streaming broker            |
 | `connect`        | debezium/connect:3.1         | 8083  | CDC connector (Postgres → Kafka)  |
 | `flyway`         | flyway/flyway:11             | —     | Schema migration runner (one-shot)|
+
+## Architecture and troubleshooting guide
+
+- [Architecture and troubleshooting guide](documentation/architecture-troubleshooting.MD)
 
 ## Prerequisites
 
@@ -59,9 +89,66 @@ This will:
 Stops all containers. The `postgres-data` volume is preserved. To fully reset:
 
 ```bash
-docker compose down -v
-docker volume rm postgres-data
+./reset.sh --yes
 ```
+
+## Health check
+
+Run a full infrastructure health check:
+
+```bash
+./health.sh
+```
+
+What it verifies:
+
+1. Docker daemon is running
+2. Required containers are running (`some-postgres`, `kafka`, `debezium-connect`)
+3. Postgres is ready and `wal_level=logical`
+4. Debezium connector and task are both `RUNNING`
+5. Expected Kafka topic exists for the current scope (derived from `TOPIC_PREFIX` + first entry in `TABLE_INCLUDE_LIST`)
+6. Replication slot (`example_slot`) is active (warn-only if temporarily inactive)
+
+What success looks like:
+
+- Script ends with `Health check passed`
+- No red `[✗]` lines
+
+What failure looks like:
+
+- Script exits non-zero
+- First failing check is printed with a red `[✗]` line
+
+## Full reset
+
+Run a destructive clean reset (recommended before fresh demos):
+
+```bash
+./reset.sh
+```
+
+What it does:
+
+1. Stops and removes compose resources (`down -v --remove-orphans`)
+2. Frees ports 9092, 5431, and 8083
+3. Deletes `postgres-data` volume
+4. Recreates an empty `postgres-data` volume
+5. Starts the stack again by calling `./start.sh` (default)
+
+Useful options:
+
+```bash
+./reset.sh --yes       # skip confirmation prompt
+./reset.sh --no-start  # clean reset but keep services stopped
+```
+
+How to confirm reset worked:
+
+```bash
+./health.sh
+```
+
+Expected result: all checks pass and connector status is `RUNNING`.
 
 ## Configuration
 
@@ -72,6 +159,26 @@ cp .env.example .env
 ```
 
 `.env` is gitignored and must never be committed. The connector password is read from `DB_PASSWORD` at runtime via `envsubst` — it is never written to a committed file.
+
+Connector scope is configurable via `.env`:
+
+```bash
+TOPIC_PREFIX=example
+TABLE_INCLUDE_LIST=cd.members,cd.facilities,cd.bookings
+```
+
+Example topic names produced:
+
+- `example.cd.members`
+- `example.cd.facilities`
+- `example.cd.bookings`
+
+If you change scope values, rerun:
+
+```bash
+./start.sh
+./health.sh
+```
 
 ## Adding a schema migration
 
@@ -102,6 +209,26 @@ Check connector status:
 ```bash
 curl http://localhost:8083/connectors
 ```
+
+## Demo quick checklist
+
+Before running the demo, confirm these are true:
+
+1. `./start.sh` completed successfully
+2. `./health.sh` reports `Health check passed`
+3. `.env` includes the demo table in scope:
+
+```bash
+TABLE_INCLUDE_LIST=cd.members,cd.facilities,cd.bookings
+```
+
+4. Connector status is `RUNNING`:
+
+```bash
+curl -s http://localhost:8083/connectors/example-connector/status | grep state
+```
+
+For full demo usage and expected output, see [demo/README.MD](demo/README.MD).
 
 ## Demo
 
@@ -204,6 +331,41 @@ VALUES (999, 'TestUser', 'Local', '1 Test Street, Boston', 12345, '555-000-0001'
 ```sql
 UPDATE cd.members SET address = '2 New Street, Boston' WHERE memid = 999;
 ```
+
+## Future improvements
+
+Backlog ideas to improve reliability, learning value, and production-readiness over time.
+
+### Developer experience
+
+- Add startup flow and CDC flow diagrams to speed up onboarding in additional docs and presentations.
+
+### Operations and observability
+
+- Add helper commands/scripts for replication slot lag, connector task errors, and topic offset visibility.
+- Add an optional persistent Kafka storage mode (compose override) alongside current tmpfs mode.
+- Add Debezium tuning profile documentation (snapshot mode, polling, batch size, heartbeat) for larger datasets.
+
+### Demo extensions
+
+- Add a second consumer example that demonstrates idempotent upsert processing keyed by `memid`.
+- Add optional event replay and deduplication walkthrough notes for downstream consumer patterns.
+
+### Suggested implementation order
+
+1. CI smoke test
+2. Observability helpers
+3. Persistent Kafka mode option
+
+## Script documentation
+
+- [Architecture and troubleshooting guide](documentation/architecture-troubleshooting.MD)
+- [start.sh guide](documentation/start.sh.MD)
+- [stop.sh guide](documentation/stop.sh.MD)
+- [health.sh guide](documentation/health.sh.MD)
+- [reset.sh guide](documentation/reset.sh.MD)
+- [demo/run.sh guide](documentation/demo-run.sh.MD)
+- [demo/consume.sh guide](documentation/demo-consume.sh.MD)
 
 ## Links
 
