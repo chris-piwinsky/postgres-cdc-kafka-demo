@@ -1,0 +1,12 @@
+services:
+  kafka:
+    # Override default tmpfs data paths to persist Kafka logs and metadata.
+    tmpfs:
+      - /etc/kafka/secrets
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+      - kafka-meta:/var/lib/kafka
+
+volumes:
+  kafka-data:
+  kafka-meta:

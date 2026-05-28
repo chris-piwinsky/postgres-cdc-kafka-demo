@@ -11,6 +11,9 @@ A local event-driven streaming environment using Postgres, Kafka, Debezium CDC, 
 - [Stop everything](#stop-everything)
 - [Health check](#health-check)
 - [Full reset](#full-reset)
+- [Observability helper](#observability-helper)
+- [Persistent Kafka mode](#persistent-kafka-mode)
+- [Debezium tuning profiles](#debezium-tuning-profiles)
 - [Configuration](#configuration)
 - [Adding a schema migration](#adding-a-schema-migration)
 - [Registering a Debezium connector](#registering-a-debezium-connector)
@@ -24,8 +27,11 @@ A local event-driven streaming environment using Postgres, Kafka, Debezium CDC, 
     - [stop.sh guide](documentation/stop.sh.MD)
     - [health.sh guide](documentation/health.sh.MD)
     - [reset.sh guide](documentation/reset.sh.MD)
+    - [observability.sh guide](documentation/observability.sh.MD)
     - [demo/run.sh guide](documentation/demo-run.sh.MD)
     - [demo/consume.sh guide](documentation/demo-consume.sh.MD)
+    - [Persistent Kafka mode guide](documentation/kafka-persistent-mode.MD)
+    - [Debezium tuning profiles](documentation/debezium-tuning-profiles.MD)
 - [Links](#links)
 - [Future improvements](#future-improvements)
 ## Architecture
@@ -132,6 +138,47 @@ To confirm reset worked:
 ```
 
 For full reset behavior and troubleshooting, see [documentation/reset.sh.MD](documentation/reset.sh.MD).
+
+## Observability helper
+
+Use `observability.sh` to inspect CDC runtime behavior:
+
+```bash
+./observability.sh
+```
+
+Useful focused commands:
+
+```bash
+./observability.sh slot-lag
+./observability.sh connector-errors
+./observability.sh topic-offsets
+```
+
+For full usage and interpretation guidance, see [documentation/observability.sh.MD](documentation/observability.sh.MD).
+
+## Persistent Kafka mode
+
+Default mode uses tmpfs (ephemeral Kafka data). Optional persistent mode is available with compose override:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.persist-kafka.yml up -d db kafka connect
+```
+
+For full lifecycle commands and caveats, see [documentation/kafka-persistent-mode.MD](documentation/kafka-persistent-mode.MD).
+
+## Debezium tuning profiles
+
+Tuning guidance for larger datasets is documented in:
+
+- [documentation/debezium-tuning-profiles.MD](documentation/debezium-tuning-profiles.MD)
+
+Includes recommended profiles for:
+
+- Snapshot behavior (`snapshot.mode`)
+- Poll cadence (`poll.interval.ms`)
+- Throughput sizing (`max.batch.size`, `max.queue.size`)
+- Liveness (`heartbeat.interval.ms`)
 
 ## Configuration
 
@@ -244,9 +291,12 @@ See [documentation/useful-postgres-queries.MD](documentation/useful-postgres-que
 - [stop.sh guide](documentation/stop.sh.MD)
 - [health.sh guide](documentation/health.sh.MD)
 - [reset.sh guide](documentation/reset.sh.MD)
+- [observability.sh guide](documentation/observability.sh.MD)
 - [demo/run.sh guide](documentation/demo-run.sh.MD)
 - [demo/consume.sh guide](documentation/demo-consume.sh.MD)
 - [Useful Postgres queries guide](documentation/useful-postgres-queries.MD)
+- [Persistent Kafka mode guide](documentation/kafka-persistent-mode.MD)
+- [Debezium tuning profiles](documentation/debezium-tuning-profiles.MD)
 
 ## Links
 
@@ -263,15 +313,9 @@ See [documentation/useful-postgres-queries.MD](documentation/useful-postgres-que
 
 Backlog ideas to improve reliability, learning value, and production-readiness over time.
 
-### Developer experience
-
-- Add startup flow and CDC flow diagrams to speed up onboarding in additional docs and presentations.
-
 ### Operations and observability
 
-- Add helper commands/scripts for replication slot lag, connector task errors, and topic offset visibility.
-- Add an optional persistent Kafka storage mode (compose override) alongside current tmpfs mode.
-- Add Debezium tuning profile documentation (snapshot mode, polling, batch size, heartbeat) for larger datasets.
+- Add consumer group lag visibility and alert thresholds to observability docs.
 
 ### Demo extensions
 
