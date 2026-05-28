@@ -86,7 +86,11 @@ This will:
 ./stop.sh
 ```
 
-Stops all containers. The `postgres-data` volume is preserved. To fully reset:
+Stops all containers. `postgres-data` is preserved.
+
+For full behavior and troubleshooting, see [documentation/stop.sh.MD](documentation/stop.sh.MD).
+
+To fully reset instead of stop:
 
 ```bash
 ./reset.sh --yes
@@ -100,24 +104,11 @@ Run a full infrastructure health check:
 ./health.sh
 ```
 
-What it verifies:
-
-1. Docker daemon is running
-2. Required containers are running (`some-postgres`, `kafka`, `debezium-connect`)
-3. Postgres is ready and `wal_level=logical`
-4. Debezium connector and task are both `RUNNING`
-5. Expected Kafka topic exists for the current scope (derived from `TOPIC_PREFIX` + first entry in `TABLE_INCLUDE_LIST`)
-6. Replication slot (`example_slot`) is active (warn-only if temporarily inactive)
-
-What success looks like:
+Quick success signal:
 
 - Script ends with `Health check passed`
-- No red `[✗]` lines
 
-What failure looks like:
-
-- Script exits non-zero
-- First failing check is printed with a red `[✗]` line
+For full checks list, warnings, and troubleshooting, see [documentation/health.sh.MD](documentation/health.sh.MD).
 
 ## Full reset
 
@@ -127,14 +118,6 @@ Run a destructive clean reset (recommended before fresh demos):
 ./reset.sh
 ```
 
-What it does:
-
-1. Stops and removes compose resources (`down -v --remove-orphans`)
-2. Frees ports 9092, 5431, and 8083
-3. Deletes `postgres-data` volume
-4. Recreates an empty `postgres-data` volume
-5. Starts the stack again by calling `./start.sh` (default)
-
 Useful options:
 
 ```bash
@@ -142,13 +125,13 @@ Useful options:
 ./reset.sh --no-start  # clean reset but keep services stopped
 ```
 
-How to confirm reset worked:
+To confirm reset worked:
 
 ```bash
 ./health.sh
 ```
 
-Expected result: all checks pass and connector status is `RUNNING`.
+For full reset behavior and troubleshooting, see [documentation/reset.sh.MD](documentation/reset.sh.MD).
 
 ## Configuration
 
@@ -248,22 +231,7 @@ Listens on the `example.cd.members` topic from the beginning. CDC events will pr
 ./demo/run.sh
 ```
 
-This script:
-1. Verifies the Debezium connector is `RUNNING` (exits with a clear error if not)
-2. Removes any leftover demo members from a previous run (makes the demo fully repeatable)
-3. Pauses and prompts you to confirm the consumer terminal is open
-4. Runs 3 iterations of `INSERT → UPDATE → DELETE`, with a 3-second pause between each so you can watch events appear in Terminal 1 in real time
-5. Prints the final table state
-
-Each operation produces a distinct Debezium event:
-
-| Operation | `"op"` | `before` | `after` |
-|-----------|--------|----------|---------|
-| INSERT    | `"c"`  | `null`   | new row |
-| UPDATE    | `"u"`  | old row  | new row |
-| DELETE    | `"d"`  | old row  | `null`  |
-
-See [kafka/README.MD](kafka/README.MD) for full CDC event payload documentation.
+For full run instructions, topic-scope behavior, expected events, and troubleshooting, see [demo/README.MD](demo/README.MD).
 
 ## Useful Postgres queries
 
