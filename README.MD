@@ -308,6 +308,7 @@ See [documentation/useful-postgres-queries.MD](documentation/useful-postgres-que
 - [What is Apache Kafka and how does it work?](https://stanislavkozlovski.medium.com/what-is-apache-kafka-and-how-does-it-work-16023aa2efee)
 - [How to start Kafka using Docker](https://docs.conduktor.io/learn/getting-started/docker-setup)
 - [Kafka — Building a beginner-friendly Kafka project](https://medium.com/devtechie/kafka-building-a-beginner-friendly-kafka-project-2fb0437efcb6)
+- [How PostgreSQL WAL Actually Works (And Why Everything Depends on It)](https://blog.stackademic.com/how-postgresql-wal-actually-works-and-why-everything-depends-on-it-80a4c65d6e2b)
 
 ## Future improvements
 
